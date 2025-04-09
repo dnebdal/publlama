@@ -55,9 +55,9 @@ getOrRegisterPrompt = function(name, prompt) {
   res = DBI::dbGetQuery(
     settings$dbCon, 
     "SELECT * from Prompts where checksum = :c AND name = :n",
-    list(x=checksum, n=name)
+    list(c=checksum, n=name)
   )
-  
+
   if (nrow(res) == 0) {
    stm = DBI::dbSendQuery(
      settings$dbCon, 

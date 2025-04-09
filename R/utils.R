@@ -62,6 +62,9 @@ publlamaInit = function(dbFile="publlama_db/database.sqlite",
   readSettings(settingsFile)
   settings$dbCon = initdb(dbFile)
   insertQueries(settings$dbCon, settings)
+  for (i in 1:length(settings$prompts)) {
+    getOrRegisterPrompt(names(settings$prompts)[i], settings$prompts[[i]])
+  }
   
   if (!is.na(entrezKey)) settings$entrez_key = entrezKey
   else if (!is.na(entrezKeyFile)) {

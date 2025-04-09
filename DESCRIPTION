@@ -14,6 +14,7 @@ Imports:
   DBI,
   digest,
   httr2,
+  parallel,
   pbmcapply,
   rentrez,
   RSQLite,

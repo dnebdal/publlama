@@ -137,19 +137,42 @@ askRaw = function(URL, model, query, verbose=FALSE) {
 #' 
 #' @export
 askLLMVec = function(model, prompt, article, endpoint="localhost", verbose=TRUE) {
-  work = expand.grid(endpoint=endpoint, pmid=article$pmid, prompt=prompt, model=model)
+  perror = function(str, ...) { write(sprintf(str, ...), stderr()) }
+  
+  work = expand.grid(pmid=article$pmid, prompt=prompt, model=model)
   epMod = expand.grid(endpoint=endpoint, model=model)
   epMod$URL = apply(epMod, 1, function (r){ getAndCheckEndpoint(r[1], r[2]) })
   work = merge(work, epMod)
   work = merge(work, article)
+  work$endpoint = endpoint[ 1+(1:nrow(work) %% length(endpoint)) ]
   
-  res = pbmcapply::pbmclapply(1:nrow(work), mc.cores=length(endpoint), FUN = function(i) {
-    query = settings$prompts[[ work$prompt[i] ]]
-    abstract = article$summary[i]
-    question = sprintf(query, abstract)
+  promptCache = lapply(prompt, function(p){ getPrompt(p)$prompt })
+  names(promptCache) = prompt
+  
+  res=NA
+  if(verbose) {
+    printf("Parallel: %d threads\n", length(endpoint))
+    res = parallel::mclapply(1:nrow(work), function(i) {
+      perror("[% 8d] %s /  %s", Sys.getpid(), work$URL[i], work$model[i])
+      query = promptCache[[ work$prompt[i] ]]
+      abstract = article$summary[i]
+      question = sprintf(query, abstract)
+      list(question, askRaw(work$URL[i], work$model[i], question, TRUE))
+    }, mc.cores=1, mc.preschedule=T, mc.silent = F)
+  } else {
+    res = pbmcapply::pbmclapply(
+      1:nrow(work), 
+      mc.cores=length(endpoint), 
+      mc.preschedule=T,
+      FUN = function(i) {
+        query = promptCache[[ work$prompt[i] ]]
+        abstract = article$summary[i]
+        question = sprintf(query, abstract)
+        
+        list(question, askRaw(work$URL[i], work$model[i], question, FALSE))
+    })
     
-    askRaw(work$URL[i], work$model[i], abstract, verbose)
-  })
+  }
   
-  return(res)
+  return(list(work=work, answers=res))
 }
