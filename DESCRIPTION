@@ -1,0 +1,20 @@
+Package: publlama
+Title: Query pubmed then feed summaries to LLMs
+Version: 0.9.0
+Authors@R: 
+    person("Daniel", "Nebdal", , "daniel@nebdal.net", role = c("aut", "cre"))
+Description: Define one or more pubmed queries, and pull down the metadata and
+  abstracts for the matching articles. Then define questions to ask an LLM about
+  those summaries, and send them to one or more ollama-compatible runners over HTTP.
+License: BSD_2_clause + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports:
+  DBI,
+  digest,
+  httr2,
+  pbmcapply,
+  rentrez,
+  RSQLite,
+  XML

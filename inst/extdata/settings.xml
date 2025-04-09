@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+We already have to parse both json and xml, so either would work for config files.
+XML allows multi-line text and comments, so it seemed like the nicer choice.
+-->
+<settings>
+  <entrez>
+    <!--
+    To search pubmed at a reasonable speed, you need an API key.
+    Go to https://account.ncbi.nlm.nih.gov/
+    and log in / create an account.
+    Then go to https://account.ncbi.nlm.nih.gov/settings
+    (or click your name / account settings)
+    and create a key onder API Key Management.
+    
+    Either store the key here directly, or provide the path to a file:
+    <key>0123456789abcdef</key>   or
+    <file>~/entrez_key.txt</file>
+    The file should just contain the key as one line of text
+    -->
+    <file>~/entrez_key.txt</file>
+  </entrez>
+  <llm>
+    <prompts>
+      <!--
+      Each prompt needs a unique name,
+      set in the 'name' property. Use %s as a placeholder for the article
+      summary you want to analyze, like so:
+      <prompts>
+      <prompt name="simple">
+      Does this look like a good article? Answer in JSON.
+      %s
+      </prompt>
+      </prompts>
+      -->
+      <prompt name="example">
+        Here is an abstract of a journal article. Does it deal with llama food preferences?
+        Answer "yes", "no", or "unclear".
+        Format the answer as JSON, using this template:
+        {"answer": 
+        "explanation": 
+        }
+        
+        %s
+      </prompt>
+    </prompts>
+  </llm>
+  <queries>
+    <!--
+    Provide at least one pubmed search query, see https://pubmed.ncbi.nlm.nih.gov/help/ .
+    Each query goes in a query tag with properties for name (must be unique) and type:
+    <query name="Q1" type="LLM tools">LLMs for article parsing</query>
+    Newlines will be replaced by spaces.
+    -->
+    <query name="Llama_example" type="Camelidae">llama glama food</query>
+  </queries>
+  <endpoints>
+    <!-- 
+    Provide at least one ollama-compatible API endpoint. If you have ollama
+    running locally, the default should work:
+    <endpoint name="localhost">http://127.0.0.1:11434/api/</endpoint>
+    
+    If you want to use ollama on another machine, you may have to explicitly
+    set OLLAMA_HOST to an external IP, e.g. something like this 
+    in /etc/systemd/system/ollama.unit:
+    Environment="OLLAMA_HOST=192.168.0.2:11434"
+    -->
+    <endpoint name="localhost">http://127.0.0.1:11434/api/</endpoint>
+  </endpoints>
+</settings>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<create>
+<!-- 
+DBI and RSQLite have no easy way to read multiple statements from a text file
+and execute them. We're already parsing XML, and unlike JSON it allows multi-line
+text values, so here we are.
+-->  
+  <table name="Queries">
+  CREATE TABLE Queries(
+      id      INTEGER PRIMARY KEY AUTOINCREMENT, 
+      query   TEXT,
+      type    TEXT,
+      name    TEXT NOT NULL UNIQUE
+  )   
+  </table>
+  <table name="Hits">
+  CREATE TABLE Hits(
+      id      INTEGER PRIMARY KEY AUTOINCREMENT,
+      pmid    INTEGER,
+      query   INTEGER,
+      UNIQUE(pmid,query)
+  )
+  </table>
+  <table name="Articles">
+  CREATE TABLE Articles(
+      pmid    INTEGER PRIMARY KEY AUTOINCREMENT,
+      pubdate DATE,
+      pubtype TEXT,
+      doi     TEXT,
+      journal TEXT,
+      authors TEXT,
+      title   TEXT,
+      summary TEXT,
+      UNIQUE(pmid)
+  )
+  </table>
+  <table name="Evals">
+  CREATE TABLE Evals(
+      pmid      INTEGER PRIMARY KEY AUTOINCREMENT,
+      evaluator INTEGER,
+      keep      BOOLEAN,
+      UNIQUE(pmid, evaluator)
+  )
+  </table>
+  <table name="Evaluators">
+  CREATE TABLE Evaluators(
+      id      INTEGER PRIMARY KEY AUTOINCREMENT,
+      name    TEXT,
+      human   BOOLEAN,
+      model   INTEGER,
+      prompt  INTEGER
+  ) 
+  </table>
+  <table name="Prompts">
+  CREATE TABLE Prompts(
+      id        INTEGER PRIMARY KEY AUTOINCREMENT,
+      name      TEXT,
+      checksum  TEXT,
+      prompt    TEXT
+  )
+  </table>
+  <table name="LLM">
+  CREATE TABLE LLM(
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    URL     TEXT,
+    model   TEXT,
+    parallel INTEGER
+  )
+  </table>
+</create>
