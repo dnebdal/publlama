@@ -4,7 +4,7 @@
 \alias{askLLMVec}
 \title{Ask an LLM a question about an article summary}
 \usage{
-askLLMVec(model, prompt, article, endpoint = "localhost", verbose = TRUE)
+askLLMVec(model, prompt, article, endpoint = "localhost", verbose = FALSE)
 }
 \arguments{
 \item{model}{Model name(s) to ask (must be available on all endpoints)}

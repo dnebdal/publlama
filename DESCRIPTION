@@ -13,9 +13,11 @@ RoxygenNote: 7.3.2
 Imports:
   DBI,
   digest,
+  future,
+  future.apply,
   httr2,
-  parallel,
   pbmcapply,
+  progressr,
   rentrez,
   RSQLite,
   XML
