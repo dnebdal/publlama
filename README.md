@@ -1,7 +1,6 @@
 # Description
 Publlama can run queries against pubmed using [rentrez](https://cran.r-project.org/web/packages/rentrez/index.html), 
-and ask local LLMs questions about the abstracts of those articles through the [ollama](API).
-
+and ask local LLMs questions about the abstracts of those articles through the ollama API.
 # Installation
 ## Linux
 When installing on linux, you may run into problems installing the dependencies.
