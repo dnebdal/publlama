@@ -139,5 +139,15 @@ articles = getArticles(from="2025-01-31")
 answers = askLLMVec("phi4:latest", "isCancer", articles, "localhost")
 ```
 
-# TODO:
+# TODO
 Lots.
+
+# Installing ollama
+Go to https://ollama.com/ and follow the instructions.
+## Configuring ollama:
+See https://docs.openwebui.com/getting-started/env-configuration/#webui_auth :
+You want to set WEBUI_AUTH=False (and make sure your ollama host is only available on your internal network).
+Support for ollama authentication TBD.
+## Remote ollama instances
+Set OLLAMA_HOST to the IP address the host has on your network, or 0.0.0.0. 
+You may have to adjust your firewall settings; ollama defaults to listening on port 11434. 
