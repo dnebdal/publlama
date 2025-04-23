@@ -2,6 +2,11 @@ printf = function(str, ...) {
     cat(sprintf(str, ...))
 }
 
+#' Infix paste0
+#' 
+#' @param x,y Two strings to be concatenated
+'%_%' <- function(x,y) paste0(x, y)
+
 #' Grab something JSON-like from a string
 #' 
 #' @param text The text to search

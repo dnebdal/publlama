@@ -36,10 +36,11 @@ text values, so here we are.
   </table>
   <table name="Evals">
   CREATE TABLE Evals(
-      pmid      INTEGER PRIMARY KEY AUTOINCREMENT,
+      id        INTEGER PRIMARY KEY AUTOINCREMENT,
+      pmid      INTEGER,
       evaluator INTEGER,
-      keep      BOOLEAN,
-      UNIQUE(pmid, evaluator)
+      answer    TEXT NOT NULL,
+      timestamp INTEGER DEFAULT CURRENT_TIMESTAMP
   )
   </table>
   <table name="Evaluators">

@@ -8,11 +8,12 @@ initdb = function(dbFilename) {
   createStatements_xml = XML::xmlInternalTreeParse(createFile)
   createStatements = XML::xpathApply(createStatements_xml, "//create/table", XML::xmlValue)
   tables = unlist(XML::xpathApply(createStatements_xml, "//create/table", XML::xmlGetAttr, "name"))
-
+  missingTables = which(! tables %in% dbTables)
+  
   if (! all(tables %in% dbTables)) {
     # We're missing at least one table
-    cat("Creating tables: ")
-    lapply(createStatements, function(stm) {DBI::dbExecute(db, stm)} )
+    cat(paste("Creating tables: ", paste(tables[missingTables], collapse=","), "\n"))
+    lapply(createStatements[missingTables], function(stm) {DBI::dbExecute(db, stm)} )
     cat("ok.\n")
   }
 
@@ -88,31 +89,53 @@ getPrompt = function(nameOrID) {
   return(res)
 }
 
-getOrRegisterEvaluator = function(name, model, promptID) {
+getOrRegisterEvaluator = function(model, promptID) {
   pid = getPrompt(promptID)$id
-  
+  DBI::dbBegin(settings$dbCon)
   res = DBI::dbGetQuery(
-    settings$dbCon,
-    "SELECT * FROM Evaluators WHERE name = :n AND model = :m AND prompt = :p",
-    list(n=name, m=model, p=pid)
-  )
-  
+      settings$dbCon,
+      "SELECT * FROM Evaluators WHERE model = :m AND prompt = :p",
+      list(m=model, p=pid)
+  )  
+
   if(nrow(res) == 0) {
     stm = DBI::dbSendQuery(
       settings$dbCon, 
-      "INSERT INTO Evaluators (human, prompt, model, name) VALUES (FALSE, :p, :m, :n) RETURNING *",
-      list(p=promptID, m=model, n=name)
+      "INSERT INTO Evaluators (human, prompt, model, name) " %_% 
+      "VALUES (FALSE, :p, :m, 'LLM-auto') RETURNING *",
+      list(p=promptID, m=model)
     )
     res = DBI::dbFetch(stm)
     DBI::dbClearResult(stm)
   }
-  
+  DBI::dbCommit(settings$dbCon)
   return(res)
+}
+
+#' Store an answer from an evaluator for a given article
+#' 
+#' @param evaluatorID Evaluator, typically from getOrRegisterEvaluator
+#' @param pmid One or more pubmed id numbers
+#' @param answer One or more answers (arbitrary string, doesn't have to be valid JSON)
+insertEvals = function(evaluatorID, pmid, answer) {
+  stm = DBI::dbSendStatement(settings$dbCon,
+    "INSERT INTO Evals (evaluator, pmid, answer) VALUES (:e, :p, :a)"
+  )
+  DBI::dbBind(stm, data.frame(e=evaluatorID, p=pmid, a=answer) )
+  DBI::dbClearResult(stm)
 }
 
 insertHits = function(db, articles) {
   queryid = attr(articles, "queryid")
-  existing = DBI::dbGetQuery(db, "SELECT pmid FROM Hits WHERE query = :queryid", list(queryid=queryid))$pmid
+  if (is.null(queryid)) {
+    warning("Articles not saved as query hits - " %_% 
+              "article data.frame had no queryid attribute")
+    return()
+  }
+  
+  existing = DBI::dbGetQuery(db, 
+    "SELECT pmid FROM Hits WHERE query = :queryid", list(queryid=queryid)
+  )$pmid
   articles = articles[! articles$pmid %in% existing, ]
   if (nrow(articles) > 0) {
     articles$query = queryid
