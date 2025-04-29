@@ -4,7 +4,14 @@
 \alias{askLLMVec}
 \title{Ask an LLM a question about an article summary}
 \usage{
-askLLMVec(model, prompt, article, endpoint = "localhost", verbose = FALSE)
+askLLMVec(
+  model,
+  prompt,
+  article,
+  endpoint = "localhost",
+  qlen = 1,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{model}{Model name(s) to ask (must be available on all endpoints)}
@@ -14,6 +21,8 @@ askLLMVec(model, prompt, article, endpoint = "localhost", verbose = FALSE)
 \item{article}{A data frame of one or more articles to ask about}
 
 \item{endpoint}{Endpoint to send the query to}
+
+\item{qlen}{Number of queries to queue up per runner}
 
 \item{verbose}{Print HTTP error codes if the query fails
 

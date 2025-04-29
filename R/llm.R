@@ -71,6 +71,7 @@ askRaw = function(URL, model, query, verbose=FALSE) {
 #' @param prompt Prompt name defined in the settings
 #' @param article A data frame of one or more articles to ask about
 #' @param endpoint Endpoint to send the query to
+#' @param qlen Number of queries to queue up per runner
 #' @param verbose Print HTTP error codes if the query fails
 #'
 #' The endpoint_name is from the settings.xml file.
@@ -81,16 +82,21 @@ askRaw = function(URL, model, query, verbose=FALSE) {
 #' If you have installed a new model later, re-run publlamaInit().
 #'
 #' @export
-askLLMVec = function(model, prompt, article, endpoint="localhost", verbose=FALSE) {
+askLLMVec = function(model, prompt, article, endpoint="localhost", qlen=1, verbose=FALSE) {
   Nw = length(endpoint)
-  oldPlan = future::plan(future::multicore, workers=Nw)
-  
+  oldPlan = future::plan(future::multicore, workers=Nw*qlen)
+
   epMod = expand.grid(endpoint=endpoint, model=model)
   epMod$URL = apply(epMod, 1, function (r){ getAndCheckEndpoint(r[1], r[2]) })
 
   work = expand.grid(pmid=article$pmid, prompt=prompt, model=model)
+  work$row=1:nrow(work)
   work = merge(work, article)
+  work=work[order(work$row), ]
+  work = work[, colnames(work)!="row"]
+  if(verbose) print(work[, 1:3])
   work$URL = epMod$URL[ 1+(1:nrow(work) %% Nw) ]
+  
 
   promptCache = lapply(prompt, function(p){ getPrompt(p)$prompt })
   names(promptCache) = prompt
@@ -116,14 +122,20 @@ askLLMVec = function(model, prompt, article, endpoint="localhost", verbose=FALSE
         answer=answer
       ))
     })
+    res = res[!is.null(res)]
     return(do.call(rbind, res))
-  })
+  }, future.seed=TRUE)
   
   res = merge(work, do.call(rbind, res))
   future::plan(oldPlan)
+  for(m in model) {
+    for(p in prompt) {
+      pmres = res[res$model == m & res$prompt == p, ]
+      evaluator = getOrRegisterEvaluator(m, p)$id
+      insertEvals(evaluator, pmres$pmid, pmres$answer)
+    }
+  }
   
-  evaluator = getOrRegisterEvaluator(model, prompt)$id
-  insertEvals(evaluator, res$pmid, res$answer)
   
   return( res )
 }
