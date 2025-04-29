@@ -94,9 +94,7 @@ askLLMVec = function(model, prompt, article, endpoint="localhost", qlen=1, verbo
   work = merge(work, article)
   work=work[order(work$row), ]
   work = work[, colnames(work)!="row"]
-  if(verbose) print(work[, 1:3])
   work$URL = epMod$URL[ 1+(1:nrow(work) %% Nw) ]
-  
 
   promptCache = lapply(prompt, function(p){ getPrompt(p)$prompt })
   names(promptCache) = prompt
