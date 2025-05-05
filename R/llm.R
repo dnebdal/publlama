@@ -109,10 +109,14 @@ askLLMVec = function(model, prompt, article, endpoint="localhost", qlen=1, verbo
       question = sprintf(query, row$summary)
       answer=askRaw(row$URL, row$model, question, FALSE)
       if(verbose) {
-        p(sprintf("[% 20s] prompt %s, pmid %s, model %s", row$URL, row$prompt, row$pmid, row$model))
+        p(sprintf("[% 20s] pmid %s, prompt %s, model %s", row$URL, row$prompt, row$pmid, row$model))
       } else {
         p()
       }
+      
+      evaluator = getOrRegisterEvaluator(row$model, row$prompt)$id
+      insertEvals(evaluator, row$pmid, answer)
+      
       return(data.frame(
         pmid=row$pmid,
         model=row$model,
@@ -126,14 +130,6 @@ askLLMVec = function(model, prompt, article, endpoint="localhost", qlen=1, verbo
   
   res = merge(work, do.call(rbind, res))
   future::plan(oldPlan)
-  for(m in model) {
-    for(p in prompt) {
-      pmres = res[res$model == m & res$prompt == p, ]
-      evaluator = getOrRegisterEvaluator(m, p)$id
-      insertEvals(evaluator, pmres$pmid, pmres$answer)
-    }
-  }
-  
   
   return( res )
 }
