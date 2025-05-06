@@ -103,7 +103,7 @@ getOrRegisterEvaluator = function(model, promptID) {
       settings$dbCon, 
       "INSERT INTO Evaluators (human, prompt, model, name) " %_% 
       "VALUES (FALSE, :p, :m, 'LLM-auto') RETURNING *",
-      list(p=promptID, m=model)
+      list(p=pid, m=model)
     )
     res = DBI::dbFetch(stm)
     DBI::dbClearResult(stm)

@@ -14,7 +14,46 @@ printf = function(str, ...) {
 #' Returns anything from the first \{ to the last \}, inclusive.
 #' @export
 grabJSON = function(text) {
+  text = gsub("<think>.*</think>", "", text)
   return(gsub("^[^{]*([{].*[}])[^}]*$", "\\1", text ))
+}
+
+fixNull = function(l) {
+  nulls = unlist(lapply(l, is.null))
+  l[ names(nulls[nulls]) ] <- "NA"
+  return(l)
+}
+
+addMissing = function(l, names_all, NA_string="NA") {
+  missing = setdiff(names_all, names(l))
+  l[missing] <- NA_string
+  return(l)
+}
+
+collapseArrays = function(i) {
+  lapply(i, paste, collapse=", ")
+}
+
+tryJSON = function(txt, fallback=list()) {
+  tryCatch(jsonlite::fromJSON(txt), error=function(e){fallback} )
+}
+
+#' Explode a vector of JSON strings to a table
+#' 
+#' @param raw_json A vector of strings containing unparsed JSON text
+#' @param NA_string The value used to fill gaps from missing values (default "NA")
+#' 
+#' This is a "best effort" attempt: It fills gaps and missing values
+#' and attempts to return a data.frame with as may rows as the input,
+#' and with one column for each unique key seen in the JSON, padded out
+#' with the NA_string value where needed. 
+#' @export
+jsonToTable = function(raw_json, NA_string="NA") {
+  items = lapply(raw_json, function(j) fixNull(tryJSON(grabJSON(j))) )
+  superset_names = unique(Reduce(c, lapply(items, names)))
+  items = lapply(items, addMissing, superset_names, NA_string)
+  items = lapply(items, collapseArrays)
+  do.call(rbind, lapply(items, as.data.frame))
 }
 
 #' Remove leading and trailing whitespace from a string
