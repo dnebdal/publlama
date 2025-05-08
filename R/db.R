@@ -89,6 +89,11 @@ getPrompt = function(nameOrID) {
   return(res)
 }
 
+#' Get info about an evaluator (a model + prompt pair)
+#' 
+#' @param model The name of a model, e.g. "phi4:latest"
+#' @param promptID The name of a prompt, from settings.xml
+#' @export
 getOrRegisterEvaluator = function(model, promptID) {
   pid = getPrompt(promptID)$id
   DBI::dbBegin(settings$dbCon)
@@ -123,6 +128,46 @@ insertEvals = function(evaluatorID, pmid, answer) {
   )
   DBI::dbBind(stm, data.frame(e=evaluatorID, p=pmid, a=answer) )
   DBI::dbClearResult(stm)
+}
+
+#' Retreive evaluations (LLM answers)
+#' 
+#' @param evaluator Filter by evaluator
+#' @param pmid Filter by Pubmed ID
+#' @param before Filter by evaluation date
+#' @param after Filter by evaluation date
+#'
+#' Using all default values will fetch every single evaluation.
+#' The evaluator and pmid fields accept multiple values.
+#' The evaluators are ID numbers from [getOrRegisterEvaluator()]. 
+#' 
+#' @examplesIf FALSE
+#' # Get answers to the 'Llama_example' question asked to phi4
+#' # in 2025
+#' ev = getOrRegisterEvaluator('phi4:latest', 'Llama_example')
+#' answers = getEvals(evaluator=ev$id, after='2025-01-01')
+#' 
+#' @export
+getEvals = function(evaluator=NA, pmid=NA, before="9999-12-31", after="0001-01-01" ) {
+  params = list(before=before, after=after, evaluator=evaluator, pmid=pmid)
+  query = "SELECT ans.pmid, ans.evaluator, ans.timestamp, evs.model, pr.name, ans.answer " %_%
+          "FROM Evals as ans, Evaluators as evs, Prompts as pr " %_%
+          "WHERE ans.evaluator==evs.id AND evs.prompt==pr.id " %_%
+          "AND ans.timestamp <= :before AND ans.timestamp >= :after "
+  
+  if(is.na(evaluator)) {
+    params = params[-(which(names(params) == "evaluator"))]
+  } else {
+    query = query %_% "AND evaluator IN (:evaluator) "
+  }
+  
+  if(is.na(pmid)) {
+    params = params[-(which(names(params) == "pmid"))]
+  } else {
+   query = query %_% "AND pmid IN (:pmid) " 
+  }
+
+  return(DBI::dbGetQuery(settings$dbCon, query, params))
 }
 
 insertHits = function(db, articles) {

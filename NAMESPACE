@@ -3,6 +3,8 @@
 export(askLLMVec)
 export(getArticles)
 export(getEndpoints)
+export(getEvals)
+export(getOrRegisterEvaluator)
 export(getPrompts)
 export(getQueries)
 export(getQueryByName)
