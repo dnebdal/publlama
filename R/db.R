@@ -149,24 +149,23 @@ insertEvals = function(evaluatorID, pmid, answer) {
 #' 
 #' @export
 getEvals = function(evaluator=NA, pmid=NA, before="9999-12-31", after="0001-01-01" ) {
-  params = list(before=before, after=after, evaluator=evaluator, pmid=pmid)
-  query = "SELECT ans.pmid, ans.evaluator, ans.timestamp, evs.model, pr.name, ans.answer " %_%
+  params = list(before=before, after=after)
+  query = "SELECT ans.pmid, ans.evaluator, ans.timestamp, evs.model, pr.name as query, ans.answer " %_%
           "FROM Evals as ans, Evaluators as evs, Prompts as pr " %_%
           "WHERE ans.evaluator==evs.id AND evs.prompt==pr.id " %_%
           "AND ans.timestamp <= :before AND ans.timestamp >= :after "
   
-  if(is.na(evaluator)) {
-    params = params[-(which(names(params) == "evaluator"))]
-  } else {
-    query = query %_% "AND evaluator IN (:evaluator) "
+  if(! is.single.NA(evaluator)) {
+    evaluator = paste0(evaluator, ",")
+    query = query %_% sprintf("AND evaluator IN (%s) ", evaluator)
   }
   
-  if(is.na(pmid)) {
-    params = params[-(which(names(params) == "pmid"))]
-  } else {
-   query = query %_% "AND pmid IN (:pmid) " 
+  if(! is.single.NA(pmid)) {
+    pmid = paste0(pmid, collapse=",")
+    query = query %_% sprintf("AND pmid IN (%s) ",  pmid)
   }
-
+  print(query)
+  print(params)
   return(DBI::dbGetQuery(settings$dbCon, query, params))
 }
 
