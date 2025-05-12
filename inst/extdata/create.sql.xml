@@ -23,7 +23,7 @@ text values, so here we are.
   </table>
   <table name="Articles">
   CREATE TABLE Articles(
-      pmid    INTEGER PRIMARY KEY AUTOINCREMENT,
+      pmid    INTEGER PRIMARY KEY,
       pubdate DATE,
       pubtype TEXT,
       doi     TEXT,
@@ -67,5 +67,18 @@ text values, so here we are.
     model   TEXT,
     parallel INTEGER
   )
+  </table>
+  <table name="Types">
+    CREATE TABLE Types(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL
+      )
+  </table>
+  <table name="ArticleTypes">
+    CREATE TABLE ArticleTypes(
+      type INTEGER NOT NULL,
+      article INTEGER NOT NULL,
+      PRIMARY KEY(type, article)
+    )
   </table>
 </create>

@@ -200,7 +200,17 @@ insertArticles = function(db, articles) {
       )
     DBI::dbBind(stm, new)
     DBI::dbClearResult(stm)
+    
   }
+  
+  for(i in 1:nrow(new)) {
+    pubtypes = new[i, "pubtype"]
+    if(nchar(pubtypes)==0) next
+    types = strsplit(pubtypes, ";")
+    if(length(types) == 0) next
+    registerArticleTypes(new[i, "pmid"], types[[1]])
+  }
+    
   printf("Inserted %i new articles\n", nrow(new))
 }
 
@@ -215,4 +225,38 @@ getArticles = function(from="1000-01-01", to="3000-01-01") {
   sql = "SELECT * FROM Articles a WHERE a.pubdate >= :from AND a.pubdate <= :to"
   res = DBI::dbGetQuery(db, sql, args)
   return(res)
+}
+
+getOrRegisterType = function(name) {
+  DBI::dbBegin(settings$dbCon)
+  res = DBI::dbGetQuery(
+    settings$dbCon,
+    "SELECT id FROM Types WHERE name = :n",
+    list(n=name)
+  )  
+  
+  if(nrow(res) == 0) {
+    stm = DBI::dbSendQuery(
+      settings$dbCon, 
+      "INSERT INTO Types (name) VALUES (:n) RETURNING id",
+      list(n=name)
+    )
+    res = DBI::dbFetch(stm)
+    DBI::dbClearResult(stm)
+  }
+  DBI::dbCommit(settings$dbCon)
+  return(res$id)
+}
+
+registerArticleTypes = function(pmid, types) {
+  for(aType in types) {
+    tId = getOrRegisterType(aType)
+    stm = DBI::dbSendStatement(
+      settings$dbCon,
+      "INSERT INTO ArticleTypes(article, type) VALUES (:a, :t) " %_%
+      "ON CONFLICT DO NOTHING"
+      )
+    DBI::dbBind(stm, list(a=pmid, t=tId) )
+    DBI::dbClearResult(stm)
+  }
 }
