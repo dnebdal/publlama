@@ -203,11 +203,22 @@ insertArticles = function(db, articles) {
     
   }
   
+  new$pubtype[is.na(new$pubtype)] <- ""
+
+  isOK = function(x) {
+    if(is.null(x)) {return(FALSE)}
+    if(is.na(x))   {return(FALSE)}
+    if(! typeof(x) == "character") {return(FALSE)}
+    return(TRUE)
+  }
+  
   for(i in 1:nrow(new)) {
-    pubtypes = new[i, "pubtype"]
-    if(nchar(pubtypes)==0) next
+    pubtypes = as.character(new[i, "pubtype"])
+    ok = tryCatch(isOK(pubtypes), error=function(e){return(FALSE)} )
+    if(! ok) { next }
+    
     types = strsplit(pubtypes, ";")
-    if(length(types) == 0) next
+    if(length(types) == 0) {next}
     registerArticleTypes(new[i, "pmid"], types[[1]])
   }
     
