@@ -4,12 +4,21 @@
 \alias{getArticles}
 \title{Get articles from the DB}
 \usage{
-getArticles(from = "1000-01-01", to = "3000-01-01")
+getArticles(
+  from = "1000-01-01",
+  to = "3000-01-01",
+  types.include = NA,
+  types.exclude = NA
+)
 }
 \arguments{
 \item{from}{Start date (inclusive)}
 
 \item{to}{End date (inclusive)}
+
+\item{types.include}{Only get articles that have at least one of these types}
+
+\item{types.exclude}{Exclude articles that have any of these types}
 }
 \description{
 Get articles from the DB

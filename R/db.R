@@ -218,16 +218,48 @@ insertArticles = function(db, articles) {
 #' 
 #' @param from Start date (inclusive)
 #' @param to End date (inclusive)
+#' @param types.include Only get articles that have at least one of these types
+#' @param types.exclude Exclude articles that have any of these types
 #' @export
-getArticles = function(from="1000-01-01", to="3000-01-01") {
+getArticles = function(from="1000-01-01", to="3000-01-01", types.include=NA, types.exclude=NA) {
   db = settings$dbCon
   args = list(from=from, to=to)
-  sql = "SELECT * FROM Articles a WHERE a.pubdate >= :from AND a.pubdate <= :to"
+  sql = "SELECT * FROM Articles a " %_%
+        "WHERE a.pubdate >= :from AND a.pubdate <= :to "
+  
+  if(! is.single.NA(types.include)) {
+    typeNums = lapply(types.include, getOrRegisterType, addIfMissing=FALSE)
+    typeNums = unlist(typeNums)
+    if(any(is.na(typeNums))) {
+      printf("!! The following type(s) were not found in types.include: %s\n", 
+             paste(types.include[is.na(typeNums)], collapse=",")  )
+      return(NA)
+    }
+    
+    typeTxt = paste0(typeNums, collapse=",")
+    sql = sql %_% "AND a.pmid IN (" %_%
+          sprintf("SELECT article FROM ArticleTypes at WHERE at.type IN (%s)) ", typeTxt)
+  }
+  
+  if(! is.single.NA(types.exclude)) {
+    typeNums = lapply(types.exclude, getOrRegisterType, addIfMissing=FALSE)
+    typeNums = unlist(typeNums)
+    if(any(is.na(typeNums))) {
+      printf("!! The following type(s) were not found in types.exclude: %s\n", 
+             paste(types.exclude[is.na(typeNums)], collapse=",")  )
+      return(NA)
+    }
+    
+    typeTxt = paste0(typeNums, collapse=",")
+    sql = sql %_% "AND NOT a.pmid IN (" %_%
+      sprintf("SELECT article FROM ArticleTypes at WHERE at.type IN (%s)) ", typeTxt)
+  }
+  printf(sql)
   res = DBI::dbGetQuery(db, sql, args)
   return(res)
 }
 
-getOrRegisterType = function(name) {
+getOrRegisterType = function(name, addIfMissing=TRUE) {
   DBI::dbBegin(settings$dbCon)
   res = DBI::dbGetQuery(
     settings$dbCon,
@@ -235,7 +267,8 @@ getOrRegisterType = function(name) {
     list(n=name)
   )  
   
-  if(nrow(res) == 0) {
+  if(nrow(res) == 0 & addIfMissing) {
+    # The type didn't exist and we are adding it
     stm = DBI::dbSendQuery(
       settings$dbCon, 
       "INSERT INTO Types (name) VALUES (:n) RETURNING id",
@@ -243,7 +276,11 @@ getOrRegisterType = function(name) {
     )
     res = DBI::dbFetch(stm)
     DBI::dbClearResult(stm)
+  } else if (nrow(res)==0) {
+    # The type didn't exist, and we're not adding it
+    res = list(id = NA)
   }
+  
   DBI::dbCommit(settings$dbCon)
   return(res$id)
 }
