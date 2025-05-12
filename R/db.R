@@ -260,3 +260,21 @@ registerArticleTypes = function(pmid, types) {
     DBI::dbClearResult(stm)
   }
 }
+
+#' Get all known article types and counts
+#' 
+#' Returns a data frame with 'name' and 'count', 
+#' where the count is the number of articles in the entire DB with this type.
+#' One article can have multiple types.
+#' 
+#' @export
+getTypes = function() {
+  res = DBI::dbGetQuery(
+    settings$dbCon, 
+    "SELECT t.name as name, count(*) as count " %_%
+    "FROM Types AS t JOIN ArticleTypes AS at " %_%
+    "ON at.type = t.id " %_%
+    "GROUP BY t.name ORDER BY count DESC"
+  )
+  return(res)
+}
