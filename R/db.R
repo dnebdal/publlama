@@ -231,8 +231,15 @@ insertArticles = function(db, articles) {
 #' @param to End date (inclusive)
 #' @param types.include Only get articles that have at least one of these types
 #' @param types.exclude Exclude articles that have any of these types
+#' @param queries Only get articles that were hits for the given query/-ies.
+#' 
+#' When not specified, arguments are maximally inclusive:
+#' getArticles() with no arguments returns every hit that has been returned
+#' as the result of any query you have run, no matter the article type
+#' or which query, from year 1000 to 9999 (which should cover most of pubmed).
+#' 
 #' @export
-getArticles = function(from="1000-01-01", to="3000-01-01", types.include=NA, types.exclude=NA) {
+getArticles = function(from="1000-01-01", to="3000-01-01", types.include=NA, types.exclude=NA, queries=NA) {
   db = settings$dbCon
   args = list(from=from, to=to)
   sql = "SELECT * FROM Articles a " %_%
@@ -260,12 +267,19 @@ getArticles = function(from="1000-01-01", to="3000-01-01", types.include=NA, typ
              paste(types.exclude[is.na(typeNums)], collapse=",")  )
       return(NA)
     }
-    
     typeTxt = paste0(typeNums, collapse=",")
     sql = sql %_% "AND NOT a.pmid IN (" %_%
       sprintf("SELECT article FROM ArticleTypes at WHERE at.type IN (%s)) ", typeTxt)
   }
-  printf(sql)
+  
+  if(! is.single.NA(queries)) {
+    queryNums = attr(getQueryByName(queries), "id")
+    queryTxt = paste0(queryNums, collapse=",")
+    sql = sql %_% "AND a.pmid IN ( " %_%
+      sprintf("SELECT DISTINCT(pmid) FROM Hits h WHERE h.query IN (%s)) ", queryTxt)
+  }
+  
+  #printf(sql)
   res = DBI::dbGetQuery(db, sql, args)
   return(res)
 }
