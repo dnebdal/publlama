@@ -164,8 +164,7 @@ getEvals = function(evaluator=NA, pmid=NA, before="9999-12-31", after="0001-01-0
     pmid = paste0(pmid, collapse=",")
     query = query %_% sprintf("AND pmid IN (%s) ",  pmid)
   }
-  print(query)
-  print(params)
+
   return(DBI::dbGetQuery(settings$dbCon, query, params))
 }
 
