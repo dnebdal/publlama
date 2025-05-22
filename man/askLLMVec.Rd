@@ -11,7 +11,8 @@ askLLMVec(
   endpoint = "localhost",
   qlen = 1,
   verbose = FALSE,
-  retries = 10
+  retries = 10,
+  force.new = FALSE
 )
 }
 \arguments{
@@ -27,14 +28,21 @@ askLLMVec(
 
 \item{verbose}{Print HTTP error codes if the query fails}
 
-\item{retries}{Retry this many times if a query fails (sleeping randomly 1-5 sec between each)
+\item{retries}{Retry this many times if a query fails (sleeping randomly 1-5 sec between each)}
 
+\item{force.new}{Send question to LLM even if this question+model+pmid combo has already been done
+#'
 The endpoint_name is from the settings.xml file.
 If you haven't changed it, the default "localhost"
 points to http://localhost:11434, the default for ollama.
 
 The valid model names are fetched when initially reading the settings.
-If you have installed a new model later, re-run publlamaInit().}
+If you have installed a new model later, re-run publlamaInit().
+
+By default, questions that have already been asked (that is, there is an answer
+in the DB for the same model, prompt and pubmed id) use that existing answer.
+If there are multiple, the newest answer is returned.
+To override this and ask again, set force.new=TRUE.}
 }
 \description{
 Ask an LLM a question about an article summary

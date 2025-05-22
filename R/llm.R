@@ -73,16 +73,23 @@ askRaw = function(URL, model, query, verbose=FALSE, retries=10) {
 #' @param qlen Number of queries to queue up per runner
 #' @param verbose Print HTTP error codes if the query fails
 #' @param retries Retry this many times if a query fails (sleeping randomly 1-5 sec between each)
-#'
+#' @param force.new Send question to LLM even if this question+model+pmid combo has already been done
+#' #'
 #' The endpoint_name is from the settings.xml file.
 #' If you haven't changed it, the default "localhost"
 #' points to http://localhost:11434, the default for ollama.
 #'
 #' The valid model names are fetched when initially reading the settings.
 #' If you have installed a new model later, re-run publlamaInit().
+#' 
+#' By default, questions that have already been asked (that is, there is an answer
+#' in the DB for the same model, prompt and pubmed id) use that existing answer.
+#' If there are multiple, the newest answer is returned.
+#' To override this and ask again, set force.new=TRUE.
 #'
 #' @export
-askLLMVec = function(model, prompt, article, endpoint="localhost", qlen=1, verbose=FALSE, retries=10) {
+askLLMVec = function(model, prompt, article, endpoint="localhost", 
+                     qlen=1, verbose=FALSE, retries=10, force.new=FALSE) {
   Nw = length(endpoint)
   oldPlan = future::plan(future::multicore, workers=Nw*qlen)
 
@@ -103,20 +110,25 @@ askLLMVec = function(model, prompt, article, endpoint="localhost", qlen=1, verbo
   res = future.apply::future_lapply( endpoint, function(e) {
     myWork = subset(work, endpoint==e)
     res = lapply(1:nrow(myWork), function(i) {
-      row = myWork[i,]
-      query = promptCache[[ row$prompt ]]
-      abstract = row$summary
-      question = sprintf(query, row$summary)
-      answer=askRaw(row$URL, row$model, question, FALSE, retries=retries)
-      if(verbose) {
-        p(sprintf("[% 20s] pmid %s, prompt %s, model %s", row$URL, row$prompt, row$pmid, row$model))
+      evaluator = getOrRegisterEvaluator(row$prompt, row$model)$id
+      ans = getEvals(evaluator=evaluator, pmid=row$pmid)
+      if(nrow(ans) > 0) {
+        answer = ans$answer[1]
       } else {
-        p()
+        row = myWork[i,]
+        query = promptCache[[ row$prompt ]]
+        abstract = row$summary
+        question = sprintf(query, row$summary)
+        answer=askRaw(row$URL, row$model, question, FALSE, retries=retries)
+        if(verbose) {
+          p(sprintf("[% 20s] pmid %s, prompt %s, model %s", row$URL, row$prompt, row$pmid, row$model))
+        } else {
+          p()
+        }
+        
+        evaluator = getOrRegisterEvaluator(row$model, row$prompt)$id
+        insertEvals(evaluator, row$pmid, answer)
       }
-      
-      evaluator = getOrRegisterEvaluator(row$model, row$prompt)$id
-      insertEvals(evaluator, row$pmid, answer)
-      
       return(data.frame(
         pmid=row$pmid,
         model=row$model,
