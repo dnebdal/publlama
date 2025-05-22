@@ -10,7 +10,8 @@ askLLMVec(
   article,
   endpoint = "localhost",
   qlen = 1,
-  verbose = FALSE
+  verbose = FALSE,
+  retries = 10
 )
 }
 \arguments{
@@ -24,7 +25,9 @@ askLLMVec(
 
 \item{qlen}{Number of queries to queue up per runner}
 
-\item{verbose}{Print HTTP error codes if the query fails
+\item{verbose}{Print HTTP error codes if the query fails}
+
+\item{retries}{Retry this many times if a query fails (sleeping randomly 1-5 sec between each)
 
 The endpoint_name is from the settings.xml file.
 If you haven't changed it, the default "localhost"

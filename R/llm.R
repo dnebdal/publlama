@@ -35,7 +35,7 @@ getAndCheckEndpoint = function(endpoint_name, model) {
   return(endpoint$endpoint)
 }
 
-askRaw = function(URL, model, query, verbose=FALSE) {
+askRaw = function(URL, model, query, verbose=FALSE, retries=10) {
   reqbody = list(
     prompt = query,
     model  = model,
@@ -47,7 +47,6 @@ askRaw = function(URL, model, query, verbose=FALSE) {
     httr2::req_body_json(reqbody) |>
     httr2::req_error(is_error = ~ FALSE)
   
-  retries = 5
   sleepmax = 5
   sleepbase = 1
   resp = httr2::req_perform(req)
@@ -73,6 +72,7 @@ askRaw = function(URL, model, query, verbose=FALSE) {
 #' @param endpoint Endpoint to send the query to
 #' @param qlen Number of queries to queue up per runner
 #' @param verbose Print HTTP error codes if the query fails
+#' @param retries Retry this many times if a query fails (sleeping randomly 1-5 sec between each)
 #'
 #' The endpoint_name is from the settings.xml file.
 #' If you haven't changed it, the default "localhost"
@@ -82,7 +82,7 @@ askRaw = function(URL, model, query, verbose=FALSE) {
 #' If you have installed a new model later, re-run publlamaInit().
 #'
 #' @export
-askLLMVec = function(model, prompt, article, endpoint="localhost", qlen=1, verbose=FALSE) {
+askLLMVec = function(model, prompt, article, endpoint="localhost", qlen=1, verbose=FALSE, retries=10) {
   Nw = length(endpoint)
   oldPlan = future::plan(future::multicore, workers=Nw*qlen)
 
@@ -107,7 +107,7 @@ askLLMVec = function(model, prompt, article, endpoint="localhost", qlen=1, verbo
       query = promptCache[[ row$prompt ]]
       abstract = row$summary
       question = sprintf(query, row$summary)
-      answer=askRaw(row$URL, row$model, question, FALSE)
+      answer=askRaw(row$URL, row$model, question, FALSE, retries=retries)
       if(verbose) {
         p(sprintf("[% 20s] pmid %s, prompt %s, model %s", row$URL, row$prompt, row$pmid, row$model))
       } else {
