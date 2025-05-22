@@ -156,7 +156,7 @@ getEvals = function(evaluator=NA, pmid=NA, before="9999-12-31", after="0001-01-0
           "AND ans.timestamp <= :before AND ans.timestamp >= :after "
   
   if(! is.single.NA(evaluator)) {
-    evaluator = paste0(evaluator, ",")
+    evaluator = paste0(evaluator, collapse=",")
     query = query %_% sprintf("AND evaluator IN (%s) ", evaluator)
   }
   
