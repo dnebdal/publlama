@@ -102,6 +102,8 @@ askLLMVec = function(model, prompt, article, endpoint="localhost",
   work=work[order(work$row), ]
   work = work[, colnames(work)!="row"]
   work$URL = epMod$URL[ 1+(1:nrow(work) %% Nw) ]
+  work$prompt = as.character(work$prompt)
+  work$model = as.character(work$model)
 
   promptCache = lapply(prompt, function(p){ getPrompt(p)$prompt })
   names(promptCache) = prompt
@@ -110,12 +112,13 @@ askLLMVec = function(model, prompt, article, endpoint="localhost",
   res = future.apply::future_lapply( endpoint, function(e) {
     myWork = subset(work, endpoint==e)
     res = lapply(1:nrow(myWork), function(i) {
-      evaluator = getOrRegisterEvaluator(row$prompt, row$model)$id
-      ans = getEvals(evaluator=evaluator, pmid=row$pmid)
+      row = myWork[i,]
+      evaluator = getOrRegisterEvaluator(row$model, row$prompt)
+      ans = getEvals(evaluator=evaluator$id, pmid=row$pmid)
       if(nrow(ans) > 0) {
         answer = ans$answer[1]
+        p("...skipped...")
       } else {
-        row = myWork[i,]
         query = promptCache[[ row$prompt ]]
         abstract = row$summary
         question = sprintf(query, row$summary)
