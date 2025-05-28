@@ -74,6 +74,7 @@ askRaw = function(URL, model, query, verbose=FALSE, retries=10) {
 #' @param verbose Print HTTP error codes if the query fails
 #' @param retries Retry this many times if a query fails (sleeping randomly 1-5 sec between each)
 #' @param force.new Send question to LLM even if this question+model+pmid combo has already been done
+#' @param include.title Include the title as well as the abstract in the text send to the LLM
 #' #'
 #' The endpoint_name is from the settings.xml file.
 #' If you haven't changed it, the default "localhost"
@@ -89,7 +90,8 @@ askRaw = function(URL, model, query, verbose=FALSE, retries=10) {
 #'
 #' @export
 askLLMVec = function(model, prompt, article, endpoint="localhost", 
-                     qlen=1, verbose=FALSE, retries=10, force.new=FALSE) {
+                     qlen=1, verbose=FALSE, retries=10, force.new=FALSE, 
+                     include.title=TRUE) {
   Nw = length(endpoint)
   oldPlan = future::plan(future::multicore, workers=Nw*qlen)
 
@@ -120,11 +122,15 @@ askLLMVec = function(model, prompt, article, endpoint="localhost",
         p("...skipped...")
       } else {
         query = promptCache[[ row$prompt ]]
-        abstract = row$summary
+        if (include.title) {
+          abstract = row$title %_% " \n " %_% row$summary
+        } else {
+            abstract = row$summary
+        }
         question = sprintf(query, row$summary)
         answer=askRaw(row$URL, row$model, question, FALSE, retries=retries)
         if(verbose) {
-          p(sprintf("[% 20s] pmid %s, prompt %s, model %s", row$URL, row$prompt, row$pmid, row$model))
+          p(sprintf("[% 20s] pmid %s, prompt %s, model %s", row$URL, row$pmid, row$prompt, row$model))
         } else {
           p()
         }

@@ -12,7 +12,8 @@ askLLMVec(
   qlen = 1,
   verbose = FALSE,
   retries = 10,
-  force.new = FALSE
+  force.new = FALSE,
+  include.title = TRUE
 )
 }
 \arguments{
@@ -30,7 +31,9 @@ askLLMVec(
 
 \item{retries}{Retry this many times if a query fails (sleeping randomly 1-5 sec between each)}
 
-\item{force.new}{Send question to LLM even if this question+model+pmid combo has already been done
+\item{force.new}{Send question to LLM even if this question+model+pmid combo has already been done}
+
+\item{include.title}{Include the title as well as the abstract in the text send to the LLM
 #'
 The endpoint_name is from the settings.xml file.
 If you haven't changed it, the default "localhost"
