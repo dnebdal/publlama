@@ -242,7 +242,7 @@ insertArticles = function(db, articles) {
 #' @export
 getArticles = function(from="1000-01-01", to="3000-01-01", types.include=NA, types.exclude=NA, queries=NA) {
   db = settings$dbCon
-  args = list(from=from, to=to)
+  args = list(from=as.character(from), to=as.character(to))
   sql = "SELECT * FROM Articles a " %_%
         "WHERE a.pubdate >= :from AND a.pubdate <= :to "
   
