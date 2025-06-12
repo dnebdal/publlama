@@ -117,7 +117,7 @@ askLLMVec = function(model, prompt, article, endpoint="localhost",
       row = myWork[i,]
       evaluator = getOrRegisterEvaluator(row$model, row$prompt)
       ans = getEvals(evaluator=evaluator$id, pmid=row$pmid)
-      if(nrow(ans) > 0) {
+      if(nrow(ans) > 0 & !force.new) {
         answer = ans$answer[1]
         p("...skipped...")
       } else {
