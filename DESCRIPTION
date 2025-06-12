@@ -17,6 +17,7 @@ Imports:
   future.apply,
   httr2,
   jsonlite,
+  parallelly,
   pbmcapply,
   progressr,
   rentrez,

@@ -93,8 +93,17 @@ askLLMVec = function(model, prompt, article, endpoint="localhost",
                      qlen=1, verbose=FALSE, retries=10, force.new=FALSE, 
                      include.title=TRUE) {
   Nw = length(endpoint)
-  oldPlan = future::plan(future::multicore, workers=Nw*qlen)
-
+  if(parallelly::supportsMulticore()) {
+    oldPlan = future::plan(future::multicore, workers=Nw*qlen)
+  } else {
+    oldPlan = future::plan(future::multisession, workers=Nw*qlen)
+  }
+  
+  if(length(unique(article$pmid)) != nrow(article)) {
+    stop("Error: article$pmid is not unique")
+    return(NULL)
+  }
+  
   epMod = expand.grid(endpoint=endpoint, model=model)
   epMod$URL = apply(epMod, 1, function (r){ getAndCheckEndpoint(r[1], r[2]) })
 
