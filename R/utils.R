@@ -7,6 +7,18 @@ printf = function(str, ...) {
 #' @param x,y Two strings to be concatenated
 '%_%' <- function(x,y) paste0(x, y)
 
+#' Return first non-NULL argument
+#' 
+#' @param ... one or more values
+#'
+#'@export
+coalesce = function(...) { 
+  x = c(...)
+  usable = which(!is.null(x))
+  return(x[min(usable)])
+}
+
+
 #' Is the argument exactly NA
 #' 
 #' @param x Value to test
