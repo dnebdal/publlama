@@ -86,6 +86,7 @@ text values, so here we are.
       pmid INTEGER NOT NULL,
       pmcid INTEGER,
       PRIMARY KEY(pmid)
+      )
   </table>
   <table name="PmcFulltext">
     CREATE TABLE PmcFulltext(
