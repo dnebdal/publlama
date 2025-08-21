@@ -81,4 +81,16 @@ text values, so here we are.
       PRIMARY KEY(type, article)
     )
   </table>
+  <table name="PmidToPmc">
+    CREATE TABLE PmidToPmc(
+      pmid INTEGER NOT NULL,
+      pmcid INTEGER,
+      PRIMARY KEY(pmid)
+  </table>
+  <table name="PmcFulltext">
+    CREATE TABLE PmcFulltext(
+      pmcid INTEGER NOT NULL,
+      article TEXT,
+      PRIMARY KEY(pmcid)
+  </table>
 </create>
