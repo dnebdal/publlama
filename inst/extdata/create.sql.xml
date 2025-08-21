@@ -92,5 +92,6 @@ text values, so here we are.
       pmcid INTEGER NOT NULL,
       article TEXT,
       PRIMARY KEY(pmcid)
+      )
   </table>
 </create>
