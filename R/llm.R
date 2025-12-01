@@ -163,3 +163,91 @@ askLLMVec = function(model, prompt, article, endpoint="localhost",
   
   return( res )
 }
+
+
+
+#' Bulk submit LLM questions
+#'
+#' @param tbl Data frame of questions. Must have columns pmid, model, promptid.
+#' @param endpoints Endpoint(s) to send the query to
+#' @param qlen Number of queries to queue up per runner
+#' @param verbose Print HTTP error codes if the query fails
+#' @param retries Retry this many times if a query fails (sleeping randomly 1-5 sec between each)
+#' @param force.new Send question to LLM even if this question+model+pmid combo has already been done (default TRUE)
+#' @param include.title Include the title as well as the abstract in the text send to the LLM
+#' 
+#' The endpoint_name is from the settings.xml file.
+#' If you haven't changed it, the default "localhost"
+#' points to http://localhost:11434, the default for ollama.
+#'
+#' The valid model names are fetched when initially reading the settings.
+#' If you have installed a new model later, re-run publlamaInit().
+#' 
+#' By default, questions that have already been asked (that is, there is an answer
+#' in the DB for the same model, prompt and pubmed id) use that existing answer.
+#' If there are multiple, the newest answer is returned.
+#' To override this and ask again, set force.new=TRUE.
+#'
+#' @export
+askLLMBulk = function(tbl, endpoints="localhost", 
+                     qlen=1, verbose=FALSE, retries=10, force.new=TRUE, 
+                     include.title=TRUE) {
+  if(! all(c("pmid", "model", "promptid") %in% colnames(tbl)) ) {
+    stop("Error: askLLMBulk requires argument 'tbl' to include columns 'pmid', 'model' and 'promptid'")
+    return(NULL)
+  }
+  
+  # Add everything we need to the table
+  tbl$evaluatorID = unlist(apply(tbl, 1, function(row) {
+    res = getOrRegisterEvaluator(row['model'], as.integer(row['promptid']))
+    return(res$id)
+  }))
+  tbl$row = 1:nrow(tbl)
+  articles = lapply(tbl$pmid, getOneArticle)
+  articles = do.call(rbind, articles)
+  tbl$title = articles$title
+  tbl$summary = articles$summary
+
+  # Check that all endpoints have all models
+  epMod = expand.grid(endpoints=endpoints, model=unique(tbl$model))
+  epMod$URL = apply(epMod, 1, function (r){ getAndCheckEndpoint(r[1], r[2]) })
+  
+  ## Map each daemon to an endpoint:
+  # Start qlen daemons per endpoint
+  Np = length(endpoints) * qlen
+  mirai::daemons(Np, .compute = "publlama")
+  
+  # Gather the pid of each daemon
+  mirai::with_daemons(.compute = "publlama", {
+    pids = mirai::mirai_map(1:Np, \(i){Sys.getpid()})[mirai::.flat]
+  })
+  
+  # Make a pid : endpoint table and look up the URL for each (with an arbitrary model)
+  pid2ep = data.frame(pid=pids, ep = rep(endpoints, qlen))
+  pid2ep$URL = unlist(lapply(pid2ep$ep, function(ep) {
+    getAndCheckEndpoint(ep, tbl$model[1])
+  }))
+  
+  promptCache = lapply(unique(tbl$promptid), function(p){ getPrompt(p)$prompt })
+  names(promptCache) = unique(tbl$promptid)
+  #p = progressr::progressor(steps=nrow(tbl), label="askLLMBulk")
+  mirai::with_daemons(.compute = "publlama", {
+    res = mirai::mirai_map(
+      tbl[, c("pmid", "promptid", "model", "title", "summary")],
+      .f = \(pmid, promptid, model, title, summary) {
+        URL = pid2ep$URL[which(pid2ep$pid == Sys.getpid())] 
+        abstract = ifelse(include.title, title %_% '\n', "")
+        abstract = abstract %_% summary
+        query = promptCache[[ as.character(promptid) ]]
+        question = sprintf(query, abstract)
+        answer = askRaw(URL, model, question, FALSE, retries=1)
+        return(answer)
+      }
+    )
+  })
+  
+ #insertEvals(evaluatorID, pmid, answer)
+
+  return(res)
+  #mirai::daemons(0, .compute = "publlama")
+}

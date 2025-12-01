@@ -226,6 +226,19 @@ insertArticles = function(db, articles) {
   printf("Inserted %i new articles\n", nrow(new))
 }
 
+#' Get one article by PMID
+#' 
+#' @param pmid PMID of article to get
+#' 
+#' @export
+getOneArticle = function(pmid) {
+  db = settings$dbCon
+  sql = "SELECT * FROM Articles a WHERE a.pmid = :pmid"
+  res = DBI::dbGetQuery(db, sql, list(pmid=pmid))
+  return(res)
+}
+
+
 #' Get articles from the DB
 #' 
 #' @param from Start date (inclusive)
@@ -338,6 +351,21 @@ getTypes = function() {
     "FROM Types AS t JOIN ArticleTypes AS at " %_%
     "ON at.type = t.id " %_%
     "GROUP BY t.name ORDER BY count DESC"
+  )
+  return(res)
+}
+
+#' Get known PMID to PMC conversions from the DB
+#' 
+#' @param pmid one or more PMIDs
+#' 
+#' Returns a data.frame with PMID and PMC (or NA)
+lookupPmidPmc = function(pmid) {
+  pmid_string = paste0(as.character(pmid), collapse = ",")
+  
+  res = DBI::dbGetQuery(
+    settings$dbCon, 
+    sprintf("SELECT pmid, pmcid FROM PmidToPmc WHERE pmid IN (%s)", pmid_string)
   )
   return(res)
 }

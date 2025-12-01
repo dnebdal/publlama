@@ -11,6 +11,8 @@ pmid2pmcid = function(pmid) {
     return(NA)
   }
   
+  
+  
   if(length(pmid) > 1) {
     pmc = rentrez::entrez_link("pubmed", id = pmid, db = "pmc", by_id = T )
     pmc = lapply(pmc, function(p) {
