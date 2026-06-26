@@ -30,7 +30,7 @@ Remotes: `remotes::install_github("dnebdal/publlama")`
 
 Devtools: `devtools::install_github("dnebdal/publlama")`
 
-Pak: `pak::pak("https://github.com/dnebdal/publlama")
+Pak: `pak::pak("https://github.com/dnebdal/publlama")`
 
 # Entrez API key
 To query pubmed at a reasonable speed, you need an API key. To get one, log in or create an account at
