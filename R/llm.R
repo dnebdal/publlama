@@ -168,7 +168,7 @@ askLLMVec = function(model, prompt, article, endpoint="localhost",
 
 #' Bulk submit LLM questions
 #'
-#' @param tbl Data frame of questions. Must have columns pmid, model, promptid.
+#' @param tbl Data frame of questions. Must have columns pmid, model, prompt.
 #' @param endpoints Endpoint(s) to send the query to
 #' @param qlen Number of queries to queue up per runner
 #' @param verbose Print HTTP error codes if the query fails
@@ -192,14 +192,14 @@ askLLMVec = function(model, prompt, article, endpoint="localhost",
 askLLMBulk = function(tbl, endpoints="localhost", 
                      qlen=1, verbose=FALSE, retries=10, force.new=TRUE, 
                      include.title=TRUE) {
-  if(! all(c("pmid", "model", "promptid") %in% colnames(tbl)) ) {
-    stop("Error: askLLMBulk requires argument 'tbl' to include columns 'pmid', 'model' and 'promptid'")
+  if(! all(c("pmid", "model", "prompt") %in% colnames(tbl)) ) {
+    stop("Error: askLLMBulk requires argument 'tbl' to include columns 'pmid', 'model' and 'prompt'")
     return(NULL)
   }
   
   # Add everything we need to the table
   tbl$evaluatorID = unlist(apply(tbl, 1, function(row) {
-    res = getOrRegisterEvaluator(row['model'], as.integer(row['promptid']))
+    res = getOrRegisterEvaluator(row['model'], row['prompt'])
     return(res$id)
   }))
   tbl$row = 1:nrow(tbl)
@@ -227,27 +227,59 @@ askLLMBulk = function(tbl, endpoints="localhost",
   pid2ep$URL = unlist(lapply(pid2ep$ep, function(ep) {
     getAndCheckEndpoint(ep, tbl$model[1])
   }))
+  pid2ep$tag = sapply(as.character(1:length(endpoints)), 
+                      \(tag) { substr(tag, nchar(tag), nchar(tag)) } )
+  if(verbose) { print(pid2ep[1:length(endpoints), c("ep", "tag")]) }
   
-  promptCache = lapply(unique(tbl$promptid), function(p){ getPrompt(p)$prompt })
-  names(promptCache) = unique(tbl$promptid)
-  #p = progressr::progressor(steps=nrow(tbl), label="askLLMBulk")
+  
+  promptCache = lapply(unique(tbl$prompt), function(p){ getPrompt(p)$prompt })
+  names(promptCache) = unique(tbl$prompt)
+  p = progressr::progressor(steps=nrow(tbl), label="askLLMBulk")
   mirai::with_daemons(.compute = "publlama", {
     res = mirai::mirai_map(
-      tbl[, c("pmid", "promptid", "model", "title", "summary")],
-      .f = \(pmid, promptid, model, title, summary) {
-        URL = pid2ep$URL[which(pid2ep$pid == Sys.getpid())] 
+      tbl[, c("pmid", "prompt", "model", "title", "summary")],
+      .f = \(pmid, prompt, model, title, summary) {
+        startAt = Sys.time()
+        
+        pidrow = pid2ep[which(pid2ep$pid == Sys.getpid()), ]
+        URL = pidrow$URL
+        tag = pidrow$tag
+        endpoint = pidrow$ep
+        
         abstract = ifelse(include.title, title %_% '\n', "")
         abstract = abstract %_% summary
-        query = promptCache[[ as.character(promptid) ]]
+        query = promptCache[[ prompt ]]
         question = sprintf(query, abstract)
         answer = askRaw(URL, model, question, FALSE, retries=1)
-        return(answer)
+        
+        elapsed = Sys.time() - startAt
+        return(list(answer=answer, pmid=pmid, tag=tag, elapsed=elapsed, endpoint = endpoint))
       }
     )
   })
   
- #insertEvals(evaluatorID, pmid, answer)
-
-  return(res)
+  done = rep(FALSE, length(res))
+  statusStr = paste0(rep(".", length(res)), collapse="")
+  
+  while(! all(done)) {
+    doneNow = !sapply(res, mirai::unresolved)
+    changed = which(xor(done, doneNow))
+    if(any(changed)) {
+      for(ch in changed) {
+        answer = res[[ ch ]][mirai::.flat]
+        substr(statusStr, ch, ch) <- answer$tag
+        insertEvals(tbl$evaluatorID[ch], tbl$pmid[ch], answer$answer)
+      }
+      if(verbose) { 
+        p(amount=length(ch), message(statusStr))
+      } else {
+        p(amount=length(ch))
+      }
+    }
+    done = doneNow
+    if(!all(done)) { Sys.sleep(1) }
+  }
+  
+  return(res[])
   #mirai::daemons(0, .compute = "publlama")
 }
