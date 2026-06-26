@@ -25,10 +25,12 @@ git clone https://github.com/dnebdal/publlama
 R CMD INSTALL publlama
 ```
 
-### devtools/remotes:
+### devtools/remotes/pak:
 Remotes: `remotes::install_github("dnebdal/publlama")`
 
 Devtools: `devtools::install_github("dnebdal/publlama")`
+
+Pak: `pak::pak("https://github.com/dnebdal/publlama")
 
 # Entrez API key
 To query pubmed at a reasonable speed, you need an API key. To get one, log in or create an account at
@@ -49,43 +51,16 @@ The next time you run `publlamaInit()`, it will (re-) load your settings.xml fil
 
 # Configuration
 ## Prompts
-You can write one or more prompts to ask your LLM model(s) in the settings file. There is an example, but in short:
+You can write one or more prompts to ask your LLM model(s) in the settings file. An example is included, but in short:
 - A prompt is a natural language question that will be sent to an LLM
-- Include `%s` somewhere in your prompt. It will be replaced with the text of an abstract.
-- While not strictly necessary, I recommend asking for the answer to be formatted as JSON;
+- Include `%s` somewhere in your prompt. It will be replaced with the text of an abstract, or optionally the title + abstract.
+- While not strictly necessary, I recommend asking for the answer to be formatted as JSON,
  it makes it easier to extract and tabulate the answers when you run a large number of abstracts.
 - Including a JSON template ("please format the answer as JSON and use this template") seems to increase the chance of
 all the answers being formatted the same and thus being easier to tabulate
 - Since the settings file is XML, the prompts can be written on multiple lines and include most characters, 
 but `<` and `>` have to be written as `&lt;` and `&gt;`, respectively.
-- As gathered from pubmed, the abstracts are in XML format. This doesn't seem to matter to the models I've tested, 
-but they typically look something like this:
-```xml
-<AbstractText Label="INTRODUCTION" NlmCategory="UNASSIGNED"> In recent years, 
-chronic lymphocytic leukemia (CLL) treatment has changed dramatically. 
-Chemoimmunotherapy with fludarabine/cladribine, cyclophosphamide, and rituximab 
-have been almost completely replaced by targeted therapies with small molecules, 
-such as Bruton's tyrosine kinase inhibitors or B-cell lymphoma 2 (BCL-2) 
-antagonists. However, few studies have assessed the impact of novel therapies on 
-patient quality of life (QoL).</AbstractText>
-
-<AbstractText Label="AREAS COVERED" NlmCategory="UNASSIGNED"> This article 
-reviews the safety profile of new therapeutic options and their impact on the 
-QoL of CLL patients. The MEDLINE database was searched for English language 
-publications from 2010 through June 2024, including the Proceedings of the 
-American Society of Hematology from over the past 5 years.</AbstractText>
-
-<AbstractText Label="EXPERT OPINION" NlmCategory="UNASSIGNED"> CLL is a 
-clinically heterogenous disease predominantly affecting elderly patients. The 
-variable clinical course of disease requires personalization and individualized 
-treatment to achieve the optimal survival outcome and acceptable safety profile, 
-especially in the case of poor prognosis. Clinical trials performed in the past 
-decade indicate that novel drugs, used as a single agent or as part of a 
-conventional chemotherapy, offer promise in minimalizing relapse rates, and may 
-allow more effective and safer treatment options by reducing the risk of adverse 
-events, especially cytopenias and infections.</AbstractText>
-
-```
+- As gathered from pubmed, the abstracts are in XML format. This doesn't seem to matter to the models I've tested.
 
 An example prompt could be something like this:
 ```xml
@@ -139,14 +114,20 @@ answers = askLLMVec("phi4:latest", "isCancer", articles, "localhost")
 ```
 
 # TODO
-Lots.
+- Maybe use ellmer to pass queries to the LLMs. 
+- Fetch full papers from PMC and have a way to query against them.
 
 # Installing ollama
 Go to https://ollama.com/ and follow the instructions.
-## Configuring ollama:
-See https://docs.openwebui.com/getting-started/env-configuration/#webui_auth :
-You want to set WEBUI_AUTH=False (and make sure your ollama host is only available on your internal network).
-Support for ollama authentication TBD.
+On Linux, this sets up an ollama service that listens to localhost:11434 and does not ask for authenticateion. 
+
 ## Remote ollama instances
 Set OLLAMA_HOST to the IP address the host has on your network, or 0.0.0.0. 
+In practice, this usually means running `sudo systemctl edit ollama.service` and adding something like this:
+```
+[Service]
+Environment=OLLAMA_HOST="1.2.3.4:11434"
+```
+Read the comments in the systemctl file that opens, it tells you where you're supposed to write.
+
 You may have to adjust your firewall settings; ollama defaults to listening on port 11434. 
